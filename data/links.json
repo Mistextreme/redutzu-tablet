@@ -1,0 +1,23 @@
+[
+    {
+        "id": 1,
+        "title": "Google",
+        "icon": "fa-home",
+        "url": "https://www.google.com",
+        "active": false
+    },
+    {
+        "id": 2,
+        "title": "YouTube",
+        "icon": "fa-circle-info",
+        "url": "https://www.youtube.com",
+        "active": false
+    },
+    {
+        "id": 3,
+        "title": "Wikipedia",
+        "icon": "fa-link",
+        "url": "https://www.wikipedia.org",
+        "active": false
+    }
+]
