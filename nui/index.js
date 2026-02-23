@@ -34,6 +34,7 @@ const app = new Vue({
             settingsOpen:  false,       // Settings modal visibility
             editingItems:  [],          // Working copy used inside the settings modal
             linksLoaded:   false,       // Guard: only fetch from server once per session
+            activeItemId:  null,        // Tracks which sidebar item is currently active
 
             availableIcons: [
                 'fa-home',
@@ -110,7 +111,7 @@ const app = new Vue({
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({})
                 });
-                const jsonText = await response.json(); // cb sends a string
+                const jsonText = await response.json(); // cb() sends a Lua string, json-encoded
                 const items = typeof jsonText === 'string' ? JSON.parse(jsonText) : jsonText;
                 this.browser.menuItems = Array.isArray(items) ? items : [];
                 this.browser.linksLoaded = true;
@@ -136,6 +137,7 @@ const app = new Vue({
 
         // ── Browser: Handle menu item click ───────────────────────────────────
         browserHandleMenuClick(id) {
+            this.browser.activeItemId = id;
             this.browser.menuItems.forEach(item => {
                 item.active = (item.id === id);
             });
@@ -147,7 +149,7 @@ const app = new Vue({
 
         // ── Browser: Load URL into the iframe ────────────────────────────────
         browserLoadContent(url) {
-            const iframe  = document.getElementById('browserFrame');
+            const iframe = document.getElementById('browserFrame');
             if (!iframe) return;
 
             this.browser.loading    = true;
@@ -196,18 +198,32 @@ const app = new Vue({
 
         // ── Browser: Confirm and save all changes ─────────────────────────────
         async browserSaveSettings() {
-            // Commit the working copy to the real state
-            this.browser.menuItems = this.browser.editingItems.map(item => ({ ...item, active: false }));
+            // FIX: Save which item was active BEFORE committing the new list,
+            // so we can restore the active state after the server round-trip.
+            // Previously this was dead code — all items were set to active:false
+            // and then the code tried to find an active item, which could never exist.
+            const previousActiveId = this.browser.activeItemId;
 
-            // Reload the currently active link if any
-            const active = this.browser.menuItems.find(i => i.active);
-            if (active) this.browserLoadContent(active.url);
-
-            // Persist to server
-            await this.browserPersistLinks(this.browser.menuItems);
+            // Commit the working copy to the real state.
+            // All items start as inactive; active state is restored below.
+            this.browser.menuItems = this.browser.editingItems.map(item => ({
+                ...item,
+                active: item.id === previousActiveId
+            }));
 
             this.browser.settingsOpen = false;
             this.browser.editingItems = [];
+
+            // Persist to server (linksUpdated reply will sync menuItems again,
+            // so we restore activeItemId so the watcher can re-apply active state)
+            await this.browserPersistLinks(this.browser.menuItems);
+        },
+
+        // ── Browser: Re-apply active state after server sync ──────────────────
+        // Called internally after linksUpdated to keep sidebar in sync
+        browserRestoreActiveState(items) {
+            const id = this.browser.activeItemId;
+            return items.map(item => ({ ...item, active: item.id === id }));
         }
     }
 });
@@ -223,12 +239,14 @@ window.addEventListener('message', async ({ data }) => {
             app.opened = false;
             break;
 
-        // Server confirmed the save and sends back the clean JSON
+        // Server confirmed the save and sends back the clean JSON.
+        // We restore the active state because the server strips it
+        // (json.encode re-serializes all items with active: false/true as saved).
         case 'linksUpdated':
             try {
-                const items = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
-                if (Array.isArray(items)) {
-                    app.browser.menuItems = items;
+                const raw = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
+                if (Array.isArray(raw)) {
+                    app.browser.menuItems = app.browserRestoreActiveState(raw);
                 }
             } catch (e) {
                 console.error('[Browser] linksUpdated parse error:', e);
