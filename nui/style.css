@@ -513,6 +513,10 @@ a {
 .browser-welcome {
     position: absolute;
     inset: 0;
+    /* FIX (Bug 4): explicit z-index ensures the welcome screen renders above
+       the iframe regardless of stacking context. Value 1 is enough since the
+       iframe has no z-index; loader uses z-index 10 and sits above both. */
+    z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
