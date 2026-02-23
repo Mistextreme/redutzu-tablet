@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+
+    <link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap'>
+    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'>
+    
+    <link rel='stylesheet' href='style.css'>
+</head>
+<body>
+    <div id='app' data-app>
+        <div id='tablet' v-show='opened'> 
+            <div class='tablet-container'>
+
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- MAIN PAGE                                                   -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <div class='page' id='main' v-if='currentPage == "main"'>
+                    <div class='misc'>
+                        <div class='widget'>
+                            <p>{{ Calendar.day }}</p>
+                            <h1>{{ Calendar.date }}</h1>
+                            <h2>No more events today</h2>
+                        </div>
+                        <div class='crypto'>
+                            <h1>Crypto</h1>
+                            <p>Most popular crypto currencies</p>
+                            <div class='list' v-for='coin in Crypto'>
+                                <div class='currency'>
+                                    <h1><img v-bind:src='coin.icon'/> {{ coin.name }}</h1>
+                                    <p>{{ coin.description }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class='apps'>
+                        <div class='application' v-for='app in Applications' @click='switchPage(app.href)'>
+                            <div class='content' v-bind:id='app.href'>
+                                <img v-bind:src='app.icon' />
+                            </div>
+                            <h1>{{ app.name }}</h1>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- INFO PAGE                                                   -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <div class='page' id='info' v-if='currentPage == "info"'>
+                    <div class='content'>
+                        <h1>Info</h1>
+                        <br>
+                        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Numquam, temporibus odio accusamus quae quod veritatis nihil maiores incidunt quasi vero modi, ad, facere mollitia rem quas dolorem doloribus eaque distinctio?</p>
+                        <br>
+                        <h1>Intrebari frecvente</h1>
+                        <br>
+                        <p>
+                            <b class='subtitle'>Question?</b><br>
+                            Answer
+                        </p>
+                        <br>
+                        <p>
+                            <b class='subtitle'>Question?</b><br>
+                            Answer
+                        </p>
+                        <br>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- KEYBINDS PAGE                                               -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <div class='page' id='keybinds' v-if='currentPage == "keybinds"'>
+                    <div class='content'>
+                        <h1>Keybinds</h1>
+                        <br>
+                        <p><b>[K]</b> - Menu</p>
+                        <p><b>[N]</b> - Talk</p>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- BROWSER PAGE                                                -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <div class='page browser-page' id='browser' v-if='currentPage == "browser"'>
+
+                    <!-- Sidebar -->
+                    <aside class='browser-sidebar' :class='{ "browser-sidebar--collapsed": !browser.expanded }'>
+                        
+                        <!-- Sidebar Header -->
+                        <div class='browser-sidebar__header'>
+                            <div class='browser-sidebar__logo' v-show='browser.expanded'>
+                                <i class='fas fa-globe'></i>
+                                <span>Browser</span>
+                            </div>
+                            <button class='browser-sidebar__toggle' @click='browser.expanded = !browser.expanded'>
+                                <i class='fas fa-bars'></i>
+                            </button>
+                        </div>
+
+                        <!-- Nav Items -->
+                        <nav class='browser-sidebar__nav'>
+                            <div
+                                v-for='item in browser.menuItems'
+                                :key='item.id'
+                                class='browser-nav-item'
+                                :class='{ "browser-nav-item--active": item.active }'
+                                @click='browserHandleMenuClick(item.id)'
+                                :title='item.title'
+                            >
+                                <i :class='"fas " + item.icon'></i>
+                                <span class='browser-nav-item__label' v-show='browser.expanded'>{{ item.title }}</span>
+                            </div>
+                        </nav>
+
+                        <!-- Sidebar Footer: Settings button -->
+                        <div class='browser-sidebar__footer'>
+                            <button class='browser-settings-trigger' @click='browserOpenSettings()'>
+                                <i class='fas fa-gear'></i>
+                                <span v-show='browser.expanded'>Settings</span>
+                            </button>
+                        </div>
+                    </aside>
+
+                    <!-- Main content: iframe + overlays -->
+                    <div class='browser-main'>
+                        <!-- Loading spinner -->
+                        <div class='browser-loader' v-show='browser.loading'>
+                            <div class='browser-spinner'></div>
+                            <p>Loading content...</p>
+                        </div>
+
+                        <!-- Iframe -->
+                        <iframe
+                            id='browserFrame'
+                            class='browser-frame'
+                            sandbox='allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox'
+                        ></iframe>
+
+                        <!-- Welcome / empty state -->
+                        <div class='browser-welcome' v-show='!browser.currentUrl && !browser.loading'>
+                            <div class='browser-welcome__icon'>
+                                <i class='fas fa-compass'></i>
+                            </div>
+                            <h2>Browser</h2>
+                            <p>Select a link from the sidebar to start browsing.</p>
+                            <button @click='browserOpenSettings()' class='browser-welcome__btn'>
+                                <i class='fas fa-plus'></i> Add links
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ─────────────────────────────────────────────────────── -->
+                    <!-- Settings Modal (absolute inside .tablet-container)      -->
+                    <!-- ─────────────────────────────────────────────────────── -->
+                    <div class='browser-modal-overlay' v-show='browser.settingsOpen' @click.self='browserCloseSettings()'>
+                        <div class='browser-modal'>
+
+                            <!-- Modal Header -->
+                            <div class='browser-modal__header'>
+                                <div>
+                                    <h3>Menu Settings</h3>
+                                    <p>Customize your sidebar navigation links</p>
+                                </div>
+                                <button class='browser-modal__close' @click='browserCloseSettings()'>
+                                    <i class='fas fa-xmark'></i>
+                                </button>
+                            </div>
+
+                            <!-- Modal Body -->
+                            <div class='browser-modal__body'>
+                                <div class='browser-settings-list'>
+                                    <div
+                                        v-for='(item, index) in browser.editingItems'
+                                        :key='item.id'
+                                        class='browser-settings-row'
+                                    >
+                                        <span class='browser-settings-row__num'>{{ index + 1 }}</span>
+
+                                        <input
+                                            type='text'
+                                            v-model='item.title'
+                                            placeholder='Title'
+                                            class='browser-input browser-input--title'
+                                        />
+
+                                        <select v-model='item.icon' class='browser-select'>
+                                            <option
+                                                v-for='icon in browser.availableIcons'
+                                                :value='icon'
+                                                :key='icon'
+                                            >{{ icon.replace("fa-","").replace(/-/g," ") }}</option>
+                                        </select>
+
+                                        <input
+                                            type='text'
+                                            v-model='item.url'
+                                            placeholder='https://...'
+                                            class='browser-input browser-input--url'
+                                        />
+
+                                        <button
+                                            class='browser-delete-btn'
+                                            @click='browserRemoveMenuItem(item.id)'
+                                            title='Remove'
+                                        >
+                                            <i class='fas fa-trash'></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <button class='browser-add-btn' @click='browserAddMenuItem()'>
+                                    <i class='fas fa-plus'></i> Add New Link
+                                </button>
+                            </div>
+
+                            <!-- Modal Footer -->
+                            <div class='browser-modal__footer'>
+                                <button class='browser-btn browser-btn--cancel' @click='browserCloseSettings()'>
+                                    Cancel
+                                </button>
+                                <button class='browser-btn browser-btn--save' @click='browserSaveSettings()'>
+                                    <i class='fas fa-floppy-disk'></i> Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- END BROWSER PAGE -->
+
+            </div>
+            <div class='tablet-footer'>
+                <div class='line' v-on:click='switchPage("main")'></div>
+            </div>
+        </div>
+    </div>
+
+    <script src='https://unpkg.com/vue@2.6.14'></script>
+    <script src='index.js'></script>
+</body>
+</html>
