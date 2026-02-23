@@ -47,8 +47,14 @@ local function ToggleTablet(state)
             action = 'open' 
         })
     else
-        DeleteEntity(object)
-        DetachEntity(object, 1, 1)
+        -- FIX (Bug 3): DetachEntity must happen before DeleteEntity,
+        -- and object must be reset to nil so the next open recreates the prop correctly.
+        if object then
+            DetachEntity(object, 1, 1)
+            DeleteEntity(object)
+            object = nil
+        end
+
         ClearPedTasks(ped)
 
         SetNuiFocus(state, state)
@@ -75,16 +81,17 @@ RegisterNUICallback('getLinks', function(data, cb)
     if file then
         cb(file)
     else
-        -- Return empty array as fallback if file doesn't exist yet
         cb('[]')
     end
 end)
 
 -- Browser App: Save updated links (routed through server to allow file write)
+-- FIX (Bug 1): FiveM automatically deserializes the NUI fetch body, so `data`
+-- arrives here as a Lua table, NOT a string. We must re-encode it before
+-- forwarding to the server event, otherwise the server receives a table and
+-- its type check `type(jsonData) ~= 'string'` rejects it every time.
 RegisterNUICallback('saveLinks', function(data, cb)
-    -- data is already a JSON string from the NUI (fetch body as text)
-    -- We forward it to the server which has write access
-    TriggerServerEvent('redutzu-tablet:server:saveLinks', data)
+    TriggerServerEvent('redutzu-tablet:server:saveLinks', json.encode(data))
     cb('ok')
 end)
 
